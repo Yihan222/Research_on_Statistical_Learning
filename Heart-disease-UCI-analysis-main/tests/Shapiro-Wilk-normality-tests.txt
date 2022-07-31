@@ -1,0 +1,30 @@
+
+	Shapiro-Wilk normality test
+
+data:  data$age
+W = 0.98821, p-value = 0.02467
+
+
+	Shapiro-Wilk normality test
+
+data:  data$chol
+W = 0.99277, p-value = 0.2059
+
+
+	Shapiro-Wilk normality test
+
+data:  data$trestbps
+W = 0.98161, p-value = 0.00133
+
+
+	Shapiro-Wilk normality test
+
+data:  data$thalach
+W = 0.97293, p-value = 4.655e-05
+
+
+	Shapiro-Wilk normality test
+
+data:  data$oldpeak
+W = 0.85833, p-value = 3.755e-15
+
