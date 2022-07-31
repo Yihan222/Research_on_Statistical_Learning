@@ -1,0 +1,140 @@
+---
+title: "logistic regression"
+author: "Yy"
+date: "2021/12/2"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+```{r}
+library(lattice)
+library(ggplot2)
+library(caret)
+library(e1071)
+data <- read.csv("heart.csv",fileEncoding="UTF-8-BOM")
+data$X <- NULL
+data1 <- data
+
+# Factor variables
+data$target <- as.factor(data$target)
+
+# Partition data - train 70%, test 30%
+#set.seed(511)
+#ind <-sample(2,nrow(data), replace = T, prob = c(0.7, 0.3))
+# training data
+#train_data <- data[1:212, ]
+# testing data
+#test_data <- data[213:303, ]
+
+set.seed(7267)
+trainIndex = createDataPartition(data1$target, p=0.7)$Resample1
+train = data1[trainIndex, ]
+test = data1[-trainIndex, ]
+
+
+#install.packages("caret")
+library(caret)
+## Logistic Regression
+lrmodel <- glm(target ~., data = train, family = "binomial")
+summary(lrmodel)
+```
+
+
+```{r}
+# Confustion matrix for training data
+p3 <- predict(lrmodel, train, type = "response")
+p3 <- ifelse(p3>0.5,1,0)
+tab3 <- table(predicted = p3, Actual = train$target)
+tab3
+# Miss classification error for training data
+(1-sum(diag(tab3))/sum(tab3)) * 100
+# Accuracy
+(sum(diag(tab3))/sum(tab3)) * 100
+```
+
+
+```{r}
+# Confustion matrix for test data
+p4 <- predict(lrmodel, test, type = "response")
+p4 <- ifelse(p4>0.5,1,0)
+tab4 <- table(predicted = p4, Actual = test$target)
+tab4
+# Miss classification error for test data
+(1-sum(diag(tab4))/sum(tab4)) * 100
+# Accuracy
+(sum(diag(tab4))/sum(tab4)) * 100
+```
+
+
+```{r}
+# Considering attributes which have significant value
+lrmodel1 <- glm(target ~ + sex + cp + trestbps + thalach + oldpeak + ca + thal, data = train, family = "binomial")
+summary(lrmodel1)
+
+```
+
+
+```{r}
+# Confussion matrix for training data
+p3 <- predict(lrmodel1, train, type = "response")
+p3 <- ifelse(p3>0.5,1,0)
+tab3 <- table(predicted = p3, Actual = train$target)
+tab3
+# Miss classification error for training data
+(1-sum(diag(tab3))/sum(tab3)) * 100
+# Accuracy
+(sum(diag(tab3))/sum(tab3)) * 100
+```
+
+
+```{r}
+# Confussion matrix for test data
+p4 <- predict(lrmodel1, test, type = "response")
+p4 <- ifelse(p4>0.5,1,0)
+tab4 <- table(predicted = p4, Actual = test$target)
+tab4
+# Miss classification error for test data
+(1-sum(diag(tab4))/sum(tab4)) * 100
+# Accuracy
+(sum(diag(tab4))/sum(tab4)) * 100
+```
+
+
+```{r}
+############ Cross Validation #########################
+train_control <- trainControl(method="cv", number=30)
+#install.packages("e1071")
+#library("e1071")
+model <- train(target ~., data = data,trControl=train_control, method="glm", family = "binomial")
+model
+```
+```{r}
+library(ROCR)
+
+##################### ROC curve for all variables ######################
+
+prob <- predict(lrmodel, newdata=test, type="response")
+pred <- prediction(prob, test$target)
+perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+plot(perf, ylab='Sensitivity (TPR)', xlab='Specificity (FPR)')
+
+auc <- performance(pred, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+############# ROC Curve for significant variables ###############3
+
+prob1 <- predict(lrmodel1, newdata=test, type="response")
+pred1 <- prediction(prob1, test$target)
+perf1 <- performance(pred1, measure = "tpr", x.measure = "fpr")
+plot(perf1, ylab='Sensitivity (TPR)', xlab='Specificity (FPR)')
+
+auc1 <- performance(pred1, measure = "auc")
+auc1 <- auc1@y.values[[1]]
+auc1
+```
+

@@ -1,0 +1,96 @@
+---
+title: "pruning_tree"
+author: "Yihan Zhu"
+date: "12/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+
+```{r cars}
+library(caret)
+library(ggplot2)
+library(lattice)
+data <- read.csv("heart.csv",fileEncoding="UTF-8-BOM")
+data$X <- NULL
+
+# Factor variables
+data$target <- as.factor(data$target)
+
+# Partition data - train 70%, test 30%
+set.seed(7267166)
+trainIndex = createDataPartition(data$target, p=0.7)$Resample1
+train = data[trainIndex, ]
+test = data[-trainIndex, ]
+
+
+#Implementing tree model
+library(tree)
+tree_model <- tree(target ~ ., train)
+plot(tree_model)
+text(tree_model, pretty = 2)
+```
+
+
+
+```{r}
+# Confusion matrix - test
+p2 <- predict(tree_model, test, type = "class")
+# Confusion matrix - test data
+(tab2 <- table(predicted = p2, Actual = test$target))
+# Miss classification error
+(1 - sum(diag(tab2))/sum(tab2)) * 100
+#Accuracy
+(sum(diag(tab2))/sum(tab2)) * 100
+```
+
+
+```{r}
+## cross-validation to check where to stop pruning
+cv_tree = cv.tree(tree_model, FUN = prune.misclass)
+names(cv_tree)
+plot(cv_tree$size,
+     cv_tree$dev,
+     type = 'b')
+cv_tree$size
+cv_tree$dev
+
+```
+```{r}
+## Pruning the tree
+pruned_model = prune.misclass(tree_model, best = 8)
+plot(pruned_model)
+text(pruned_model, pretty = 0.5)
+```
+
+
+```{r}
+# Prediction
+# Confusion matrix - test
+p3 <- predict(pruned_model, test, type = 'class')
+# Confusion matrix - test data
+(tab3 <- table(predicted = p3, Actual = test$target))
+# Miss classification error
+(1 - sum(diag(tab3))/sum(tab3)) * 100
+#Accuracy
+(sum(diag(tab3))/sum(tab3)) * 100
+```
+
+```{r}
+prob <- predict(tree_model, test[,-14], type = "class")
+probb <- as.numeric(prob)
+library(pROC)
+plot.roc(test[,14], probb, lwd = 3, print.auc = TRUE)
+```
+
+```{r}
+prob1 <- predict(pruned_model, test[,-14], type = "class")
+probb1 <- as.numeric(prob1)
+library(pROC)
+plot.roc(test[,14], probb1, lwd = 3, print.auc = TRUE)
+```
+

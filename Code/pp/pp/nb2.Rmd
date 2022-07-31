@@ -1,0 +1,54 @@
+---
+title: "nb2"
+author: "Youhan Li"
+date: "2021/12/13"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+
+```{r}
+# fitting naivebayes model 
+library(dplyr)
+library(naivebayes)
+library(pROC)
+# load data
+data <- read.csv("heart.csv")
+colnames(data) <- c("age", "sex", "chest_pain", "bp_rest",
+                     "cholesterol", "bloodsugar_high", "ecardio_rest",
+                     "max_heartrate", "exer_angina", "oldpeak", "slope",
+                     "major_ves", "thal", "target")
+summary(data)
+```
+
+```{r}
+# arrange by feature class
+data <- arrange(data, age, by_group = FALSE)
+
+
+# separate into training-validate-test: 70-30
+set.seed(726716)
+trainIndex = createDataPartition(data$target, p=0.7)$Resample1
+training = data[trainIndex, ]
+testing = data[-trainIndex, ]
+```
+
+```{r}
+nb_model <- naive_bayes(as.factor(target) ~ ., data = training, usekernel = T, laplace = 1)
+nb_class <- predict(nb_model, testing[,-14], type="class")
+nb_prob <- predict(nb_model, testing[,-14], type = "prob")
+```
+
+```{r}
+# confusion matrix
+table(nb_class, testing[,14])
+# accuracy
+sum(nb_class == testing[,14]) # around 87%
+# plot ROC 
+plot.roc(testing[,14], nb_prob[,1], col ="blue", lwd = 3, print.auc = TRUE)
+```
+

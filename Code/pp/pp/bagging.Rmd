@@ -1,0 +1,66 @@
+---
+title: "bagging"
+author: "Yihan Zhu"
+date: "12/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+```{r}
+library(caret)
+library(ggplot2)
+library(lattice)
+data <- read.csv("heart.csv",fileEncoding="UTF-8-BOM")
+data$X <- NULL
+
+# Factor variables
+# data$target <- as.factor(data$target)
+
+set.seed(726716)
+trainIndex = createDataPartition(data$target, p=0.7)$Resample1
+train = data[trainIndex, ]
+test = data[-trainIndex, ]
+
+
+#Implementing tree model
+library(tree)
+tree_model <- tree(target ~ ., train)
+plot(tree_model)
+text(tree_model, pretty = 0)
+
+```
+
+```{r}
+## Predicting for test data
+pred = predict(tree_model, test)
+## calculating the error rate on test dataset
+mean((pred-test$target)^2)
+## plotting the prediction
+plot(pred,test$target)
+
+```
+
+
+```{r}
+## Implementing Bagging Model
+## mtry = 4 because 4 variables are important to reduce mean square error
+#install.packages("randomForest")
+library(randomForest)
+fit = randomForest(target ~., train, mtry=4, importance = TRUE)
+## Plotting the error reduced as number of tree increased. Total is 500.
+plot(fit)
+
+# use this model to do prediction on test data
+pred = predict(fit, test)
+plot(pred, test$target)
+mean((pred-test$target)^2)
+
+## Variable Importance Plot
+varImpPlot(fit)
+```
+
+

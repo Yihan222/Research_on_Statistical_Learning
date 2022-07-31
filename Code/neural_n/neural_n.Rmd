@@ -1,0 +1,140 @@
+---
+title: "sl"
+author: "Youhan Li"
+date: "2021/12/7"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+```{r}
+set.seed(748)
+
+library("rpart")
+library("caret")
+library("randomForest")
+library("neuralnet")
+library("nnet")
+
+load("cleveland.RData")
+dim(cleveland)
+names(cleveland)
+table(cleveland$diag1)
+table(cleveland$diag2)
+```
+```{r}
+#As we are not interested in the other response variable diag2 - 
+#which signifies the stage of the heart disease so we will ignore from the dataset
+
+#Create train and test data
+trainidx<-sample(1:nrow(cleveland),nrow(cleveland)*0.7,replace=FALSE)
+traindat<-cleveland[trainidx,-15]
+testdat<-cleveland[-trainidx,-15]
+
+#set.seed(7267166)
+#trainIndex = createDataPartition(data$target, p=0.7)$Resample1
+#traindat = data[trainIndex, ]
+#testdat = data[-trainIndex, ]
+
+
+table(traindat$diag1)
+table(testdat$diag1)
+```
+```{r}
+##Neural Network
+#Data Conversion as dataset contains the categorical values - model matrix
+dummy <- dummyVars(" ~.", fullRank = TRUE, data=cleveland[,-15]) 
+ncland <- data.frame(predict(dummy, newdata = cleveland[,-15])) 
+head(ncland)
+names(ncland)
+table(ncland$diag1.sick) 
+#0 - bugg - healthy - no heart disease
+#1 - sick - heart disease
+
+traindat<-ncland[trainidx,]
+testdat<-ncland[-trainidx,]
+
+table(traindat$diag1.sick)
+table(testdat$diag1.sick)
+```
+
+```{r}
+# train a neural network
+nnet1 <- neuralnet(diag1.sick ~ ., data = traindat, hidden = 1, err.fct = "ce", linear.output = FALSE)
+
+x11()
+plot(nnet1)
+
+trainpred <- round(predict(nnet1, newdata = traindat))
+train_acc <- length(which(traindat$diag1.sick == trainpred))/length(trainpred)
+train_acc
+
+testpred <- round(predict(nnet1, newdata = testdat))
+test_acc <- length(which(testdat$diag1.sick == testpred))/length(testpred)
+test_acc
+```
+
+```{r}
+#Tuning neural network to find optimal - number of hidden layers
+#based on test and train accuracy
+
+trainacclst<-c()
+testacclst<-c()
+nhiddenlayers<-c()
+
+for(i in seq(1,10)){
+  
+  nhiddenlayers<-append(nhiddenlayers,i)
+  nnet <- neuralnet(diag1.sick ~ ., data = traindat, hidden = i, 
+                    err.fct = "ce", linear.output = FALSE)
+  
+  trainpred <- round(predict(nnet, newdata = traindat))
+  train_acc <- length(which(traindat$diag1.sick == trainpred))/length(trainpred)
+  trainacclst<-append(trainacclst,train_acc)
+  
+  testpred <- round(predict(nnet, newdata = testdat))
+  test_acc <- length(which(testdat$diag1.sick == testpred))/length(testpred)
+  testacclst<-append(testacclst,test_acc)
+}
+
+X11()
+
+```
+
+
+
+
+
+```{r}
+plot(x=nhiddenlayers,y=trainacclst,type="o",lty=2,col = "brown1",xlab = "number of nodes in hidden layers",main="Neural Network- Tuning",ylab="Accuracy")
+lines(testacclst,type="o",lty=1,col="dodgerblue")
+legend("bottomright",c("training.accuracy", "test.accuracy"),lty=c(2,1),col=c("brown1","dodgerblue"))
+
+trainacclst
+testacclst
+```
+
+
+
+```{r}
+#Optimal hidden layers - 9
+finalnet <- neuralnet(diag1.sick ~ ., data = traindat, hidden = 9, 
+                      err.fct = "ce", linear.output = FALSE)
+
+x11()
+plot(finalnet)
+
+
+ftrainpred <- round(predict(finalnet, newdata = traindat))
+ftrain_acc <- length(which(traindat$diag1.sick == ftrainpred))/length(ftrainpred)
+
+ftestpred <- round(predict(finalnet, newdata = testdat))
+ftest_acc <- length(which(testdat$diag1.sick == ftestpred))/length(ftestpred)
+
+ftrain_acc
+ftest_acc
+```
+
